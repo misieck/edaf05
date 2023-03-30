@@ -41,9 +41,6 @@ public class GaleShapley {
 					företag[individNbr - 1][i] = scan.nextInt() - 1;
 				}
 			}
-
-			// System.out.println(hasBeenPassed);
-
 		}
 
 		scan.close();
@@ -58,29 +55,28 @@ public class GaleShapley {
 			alonePersons.add(i);
 			pairing[i] = -1;
 		}
-		// System.out.println(Arrays.deepToString(pairing));
+
 		while (!alonePersons.isEmpty()) {
 			int currentPerson = alonePersons.pop();
 
+			int companyPrioI = 0;
 			for (int i = 0; i < nbrOfPairs; i++) {
-				int companyPrioI = personer[currentPerson][i];
+				companyPrioI = personer[currentPerson][i];
 				boolean current_applied = applied[currentPerson][companyPrioI];
-				if (current_applied) {
-					continue;
-				}
-
-				if (pairing[companyPrioI] == -1) {
-					addPairing(pairing, companyPrioI , currentPerson);
-					applied[currentPerson][companyPrioI] = true;
+				if (!current_applied) {
 					break;
-				} else if (companyPrefersAOverB(companyPrioI, currentPerson, pairing[companyPrioI])) {
-					int previousPerson = replacePairing(pairing, companyPrioI, currentPerson);
-					alonePersons.add(previousPerson);
-				} else {
-					alonePersons.add(currentPerson);
 				}
 			}
 
+			if (pairing[companyPrioI] == -1) {
+				addPairing(pairing, companyPrioI, currentPerson);
+			} else if (companyPrefersAOverB(companyPrioI, currentPerson, pairing[companyPrioI])) {
+				int previousPerson = replacePairing(pairing, companyPrioI, currentPerson);
+				alonePersons.addLast(previousPerson);
+			} else {
+				alonePersons.addLast(currentPerson);
+			}
+			applied[currentPerson][companyPrioI] = true;
 		}
 		for (int i = 0; i < nbrOfPairs; i++) {
 			System.out.println(pairing[i] + 1);
@@ -96,6 +92,12 @@ public class GaleShapley {
 
 	private static int replacePairing(int[] pairing, int company, int person) {
 		int ret = pairing[company];
+		for (int i =0; i<pairing.length; ++i){
+			if (pairing[i] == person) {
+				assert company != i;
+				pairing[i] = -1;
+			}
+		}
 		pairing[company] = person;
 		return ret;
 	}
