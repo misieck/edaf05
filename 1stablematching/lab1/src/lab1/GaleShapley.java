@@ -43,17 +43,17 @@ public class GaleShapley {
 
 			for (int i = 0; i < nbrOfPairs; i++) {
 
-				long timeA = java.lang.System.nanoTime();
+				//long timeA = java.lang.System.nanoTime();
 				int nextInt =  scan.nextInt();
-				count ++;
-				long timeB = java.lang.System.nanoTime();
-				totalTime = totalTime + (timeB - timeA);
+				//count ++;
+				//long timeB = java.lang.System.nanoTime();
+				//totalTime = totalTime + (timeB - timeA);
 
 				if (hasBeenPassed) {// Lägger in för person individNbr
 
 					personer[individNbr - 1][i] = nextInt - 1;
 				} else {// Lägger in för företag individNbr
-					scores[individNbr - 1][nextInt-1] = i;//nextInt - 1;
+					scores[individNbr - 1][nextInt-1] = i;
 				}
 			}
 		}
@@ -67,13 +67,10 @@ public class GaleShapley {
 	private static void galeShapleyPairing() {
 		LinkedList<Integer> alonePersons = new LinkedList<Integer>();
 		int[] pairingC = new int[nbrOfPairs]; // Företag index
-		int[] pairingP = new int[nbrOfPairs]; // Företag index
 
-		boolean[][] applied = new boolean[nbrOfPairs][nbrOfPairs];
 		for (int i = 0; i < nbrOfPairs; i++) {// Alla personer i en lista
 			alonePersons.add(i);
 			pairingC[i] = -1;
-			pairingP[i] = -1;
 		}
 
 
@@ -84,16 +81,16 @@ public class GaleShapley {
 			int companyPrioI = personer[currentPerson][counters[currentPerson]];
 
 			if (pairingC[companyPrioI] == -1) {
-				addPairing(pairingC, pairingP, companyPrioI, currentPerson);
+				addPairing(pairingC, companyPrioI, currentPerson);
 			} else if (companyPrefersAOverB(companyPrioI, currentPerson, pairingC[companyPrioI])) {
-				int previousPerson = replacePairing(pairingC, pairingP, companyPrioI, currentPerson);
+				int previousPerson = replacePairing(pairingC, companyPrioI, currentPerson);
 				alonePersons.addLast(previousPerson);
 			} else {
 				alonePersons.addLast(currentPerson);
 			}
 			counters[currentPerson]++;
 		}
-		
+
 		for (int i = 0; i < nbrOfPairs; i++) {
 			System.out.println(pairingC[i] + 1);
 
@@ -101,18 +98,14 @@ public class GaleShapley {
 		return;
 	}
 
-	private static void addPairing(int[] pairingC,  int[] pairingP, int company, int person) {
+	private static void addPairing(int[] pairingC, int company, int person) {
 		if (pairingC[company] != -1) throw new AssertionError();
 		pairingC[company] = person;
-		pairingP[person] = company;
 		return;
 	}
 
-	private static int replacePairing(int[] pairingC, int[] pairingP, int company, int person) {
+	private static int replacePairing(int[] pairingC, int company, int person) {
 		int ret = pairingC[company];
-		int otherCompany = pairingP[company];
-		if (otherCompany == company) throw new AssertionError();
-		pairingP[person] = -1;
 		pairingC[company] = person;
 		return ret;
 	}
