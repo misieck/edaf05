@@ -3,13 +3,17 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <assert.h>
 
 #define W 5
 #define S 4
+#define MAXEDGES 70 // no more than 70 edges are created in the largest example.
+
 #define LEN(arr) (sizeof(arr) / sizeof(arr[0]))
-#define MAXEDGES 8000
-#define INSIZE (W+1)
-#define INFMT "%5s"
+#define INSIZE (W+1) //need one more byte for the trailing 0
+#define STR_IMPL_(x) #x      //stringify argument
+#define STR(x) STR_IMPL_(x)  //indirection to expand argument macros
+#define INFMT "%" STR(5) "s"  //format for scanf to avoid reading too many bytes and overwriting the output buffer
 
 typedef struct counter{
     char chars[W+1];
@@ -29,15 +33,13 @@ typedef struct node{
 
 void countChar(counter *counter, char c);
 
-counter countChars(const char in[W+1]){
-    counter count;
-    memset(&count, 0, sizeof(count) );
+
+void countChars(counter* counter, const char in[INSIZE]){
+    //expecting a counter initialized to all 0
     const char *p, *c = in;
-     
     while( *(p = c++) ){
-        countChar(&count, *p);
+        countChar(counter, *p);
     }
-    return count;
 }
 
 void countChar(counter* counter, char c)
@@ -66,7 +68,7 @@ typedef struct queue{
 } queue;
 
 void  queueInit(size_t size, queue* queue){
-    queue->data = calloc(size,sizeof(node*));
+    queue->data = calloc(size,sizeof(node*)); //allocate and initialize to 0
     queue->head = 0;
     queue->tail = 0;
 }
@@ -98,14 +100,14 @@ int hasEdgeFromAToB(const node* A, const node* B){
     for (int i = 0; i<LEN(A->cl.chars); ++i){
 
         char cA = A->cl.chars[i];
-        if (!cA){ //compared all characters 
+        if (!cA){ //0 found means compared all characters and didnt find differences in word counts
             break; 
         }
         
         int cntA =  A->cl.counts[i];
         int cntB = findInCounter(&B->ca, cA);
-        if (cntB < cntA){            
-            return 0;
+        if (cntB < cntA){
+          return 0; // found difference, no edge
         }
     }
     
@@ -113,16 +115,18 @@ int hasEdgeFromAToB(const node* A, const node* B){
 }
 
 void addEdge(node *from,  node *to) {
+    assert( from->nedges + 1 < MAXEDGES );
     from->edges[from->nedges++] = to;
 }
 
 void addEdges(node* nodes, size_t currentIndex){
     char* current = nodes[currentIndex].word;
     for (int i = 0; i<currentIndex; ++i){
-        //        nodes[i].edges[]
+
         if(hasEdgeFromAToB(&nodes[currentIndex], &nodes[i])){
             addEdge(&nodes[currentIndex], &nodes[i]);
         }
+
         if(hasEdgeFromAToB(&nodes[i], &nodes[currentIndex])){
             addEdge(&nodes[i], &nodes[currentIndex]);
         }
@@ -186,7 +190,7 @@ int main()
     int err;
     err = scanf("%d", &N);
     err = scanf("%d", &Q);
-    nodes = malloc(sizeof(node) *N);
+    nodes = calloc( N, sizeof(node));
     int wordN = 0;
 
     size_t SUFFIX_OFFSET = W-S; 
@@ -195,8 +199,8 @@ int main()
     for (int i = 0; i < N; i++) {
         err = scanf(INFMT, in); // read in each word separated by spaces
         strncpy( nodes[wordN].word, in, LEN(nodes[0].word) );
-        nodes[wordN].ca = countChars( in );
-        nodes[wordN].cl = countChars( &in[SUFFIX_OFFSET] );
+        countChars( &nodes[wordN].ca, in );
+        countChars( &nodes[wordN].cl, &in[SUFFIX_OFFSET] );
         nodes[wordN].nedges = 0;
         addEdges(nodes, wordN);
         wordN++;
@@ -215,10 +219,8 @@ int main()
         }
         int nbrSteps = bFS(N,node1,node2); //Breadth first search
         nbrSteps < 0 ? printf("Impossible\n") : printf("%d\n", nbrSteps);
-        //printf("Steps from %s ro %s: %d", request1, request2, nbrSteps);
     }
-       
-        
+
     free(nodes);
     return 0;
 }
