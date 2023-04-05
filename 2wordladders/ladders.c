@@ -7,18 +7,30 @@
 #define W 5
 #define S 4
 #define LEN(arr) (sizeof(arr) / sizeof(arr[0]))
+#define MAXEDGES 8000
+#define INSIZE 6
+#define INFMT "%5s"
 
 typedef struct counter{
     char chars[W+1];
     int counts[W];
 } counter;
 
-
-typedef struct word {
+typedef struct node{
     char word[W+1];
     counter cl;
     counter ca;
-} word;
+    struct node * edges[MAXEDGES];
+    size_t nedges;
+    int visited;
+    int depth;
+} node;
+
+typedef struct queue{
+    node** data;
+    size_t head;
+    size_t tail;
+} queue;
 
 
 void countChar(counter *counter, char c);
@@ -50,38 +62,14 @@ void countChar(counter* counter, char c)
     }
 }
 
-word createWord(char in[100]){
-    word ret;
-    memset(&ret, 0, sizeof(ret) );
-    strncpy( ret.word, in, LEN(ret.word) );
-    
-    ret.ca = countChars(in);
-    ret.cl = countChars(&in[1]);
-    return ret;
-}
-
-
-
-
-
-typedef struct node{
-    word  w;
-    struct node * edges[10000];
-    size_t nedges;
-    int visited;
-    int depth;
-} node;
-
-typedef struct queue{
-    node** data;
-    size_t head;
-    size_t tail;
-} queue;
-
 void  queueInit(size_t size,queue* queue){
     queue->data = calloc(size,sizeof(node*));
     queue->head = 0;
     queue->tail = 0;
+}
+
+void  queueFree(queue* queue){
+    free(queue->data);
 }
 
 void queuePush(queue *queue, node *node) { queue->data[queue->tail++] = node; }
@@ -97,23 +85,19 @@ int findInCounter(const counter* counter, char c){
     return 0;
 }
 
-
-
-
 int hasEdgeFromAToB(const node* A, const node* B){
-    const char *c, *p = A->w.cl.chars;
+    const char *c, *p = A->cl.chars;
 
-    for (int i = 0; i<LEN(A->w.cl.chars); ++i){
+    for (int i = 0; i<LEN(A->cl.chars); ++i){
 
-        char cA = A->w.cl.chars[i];
+        char cA = A->cl.chars[i];
         if (!cA){ //compared all characters 
             break; 
         }
         
-        int cntA =  A->w.cl.counts[i];
-        int cntB = findInCounter(&B->w.ca, cA);
-        if (cntB < cntA){
-            
+        int cntA =  A->cl.counts[i];
+        int cntB = findInCounter(&B->ca, cA);
+        if (cntB < cntA){            
             return 0;
         }
     }
@@ -126,7 +110,7 @@ void addEdge(node *from,  node *to) {
 }
 
 void addEdges(node* nodes, size_t currentIndex){
-    word current = nodes[currentIndex].w;
+    char* current = nodes[currentIndex].word;
     for (int i = 0; i<currentIndex; ++i){
         //        nodes[i].edges[]
         if(hasEdgeFromAToB(&nodes[currentIndex], &nodes[i])){
@@ -141,7 +125,7 @@ void addEdges(node* nodes, size_t currentIndex){
 
 node* findNode(node* nodes, const char* word, int size){
     for(int i = 0; i < size;i++){
-        if(!strcmp( nodes[i].w.word, word)){
+        if(!strcmp( nodes[i].word, word)){
             return &nodes[i];
         }
     }
@@ -172,17 +156,19 @@ int bFS(const node* nodes,int size,  node* sNode, const node* tNode){
                 queuePush(&Q,w);
 
                 if(w == tNode){
+                    queueFree(&Q);
                     return w->depth;
                 }
             }
         }
     }
+    queueFree(&Q);
     return -1;
 }
 
 int main()
 {
-    char in[6]; // declare a char array to hold the word
+    char in[INSIZE]; // declare a char array to hold the word
     node* nodes;
     int N;
     int Q;
@@ -193,8 +179,10 @@ int main()
 
 
     for (int i = 0; i < N; i++) {
-        scanf("%5s", in); // read in each word separated by spaces
-        nodes[wordN].w =createWord(in);
+        scanf(INFMT, in); // read in each word separated by spaces
+        strncpy( nodes[wordN].word, in, LEN(nodes[0].word) );
+        nodes[wordN].ca = countChars(in);
+        nodes[wordN].cl = countChars(&in[1]);
         nodes[wordN].nedges = 0;
         addEdges(nodes, wordN);
         wordN++;
@@ -202,10 +190,10 @@ int main()
     
     for (int i = 0; i < Q; i++) {
         
-        char request1[6];
-        char request2[6];
-        scanf("%5s", request1); // read in each word separated by spaces
-        scanf("%5s", request2); // read in each word separated by spaces
+        char request1[INSIZE];
+        char request2[INSIZE];
+        scanf(INFMT, request1); // read in each word separated by spaces
+        scanf(INFMT, request2); // read in each word separated by spaces
         node* node1 = findNode(nodes,request1,N);
         const node* node2 = findNode(nodes,request2,N);
         for (int i = 0; i < N; ++i){
@@ -217,7 +205,7 @@ int main()
     }
        
         
- 
+    free(nodes);
     return 0;
 }
     
