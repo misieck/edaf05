@@ -9,7 +9,7 @@ T = []
 nvisited = 0
 
 
-path = os.path.abspath( "./data/sample/1.in"  )
+path = os.path.abspath( "./data/secret/4huge.in"  )
 # replace infile with sys.stdin when done-ish
 infile = open(path);
 
@@ -31,11 +31,11 @@ for line in infile:
     #same as above but with array comprehension
     numbers = [int(x) - 1 for x in line.split()] 
 
-    print ( "readin in ", numbers)
-    nodes[numbers[0]].append((numbers[2], numbers[1]))
-    nodes[numbers[1]].append((numbers[2], numbers[0]))
+    #print ( "readin in ", numbers)
+    nodes[numbers[0]].append((numbers[2]+1, numbers[1]))
+    nodes[numbers[1]].append((numbers[2]+1, numbers[0]))
 
-print (nodes)
+
 
 def extendFrontier(newnode, heap):
     for edge in newnode:
@@ -53,19 +53,26 @@ nvisited += 1
 heap = []
 extendFrontier( nodes[0], heap )
 
-#while nvisited < N:
-newedge = heapq.heappop(heap)
-T.append(newedge)
-# todo: check if edge leads to visited
-extendFrontier( nodes[getNode(newedge)], heap)
-visited[ getNode(newedge) ] = True
-nvisited += 1
+
+print("reading done")
+
+while nvisited < N:
+    newedge = heapq.heappop(heap)
+    nodenr = getNode(newedge)
+    if visited[nodenr]:
+     #   print ("already visited: " , nodenr)
+        continue
+    T.append(newedge)
+    # todo: check if edge leads to visited
+    extendFrontier( nodes[nodenr], heap)
+    visited[ nodenr ] = True
+    nvisited += 1
+    #print (visited)
 
 
 
-
-
-print(heap)
-
-
-
+#print(nodes)
+#print(heap)
+#print(T)
+cost = sum([c for (c,n) in T])
+print (cost)
