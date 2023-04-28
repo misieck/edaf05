@@ -73,7 +73,7 @@ int main(){
 
     sscanf(line.c_str(), "%la %la", &x, &y);  
 
-    if (y < least_y.y){
+    if (y <= least_y.y){
       least_y = {x,y};
       least_idx = i;
     }
@@ -83,14 +83,19 @@ int main(){
     cout<<"point: "<<x<<", "<<y<<endl;
   }
 
-  std::for_each(points.begin(), points.end(), [least_y](point<auto> &p) { p.y -= least_y.y; p.x -= least_y.x; });  
-
+  
+  for (auto &p: points){
+      p.y -= least_y.y; p.x -= least_y.x; 
+  }
+  
 
   auto comp = [](auto &a, auto &b){ return compare(a,b)>0?true:false;  };
   std::make_heap(points.begin(), points.end(), comp);
 
-  std::for_each(points.begin(), points.end(), [](auto p){cout<<"newpoint: "<<p.x<<", "<<p.y<<endl;});
-
+  
+  for (auto p: points){
+    cout<<"newpoint: "<<p.x<<", "<<p.y<<endl;
+  }
 
   std::stack<point<double>> H;
 
