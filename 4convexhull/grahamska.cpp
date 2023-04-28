@@ -7,10 +7,15 @@
 #include <limits>
 #include <algorithm>
 #include <stack>
+#include <iomanip>
+#include <cmath>
+#include <numeric>
 
 using std::cout;
 using std::endl;
 using std::string;
+
+enum class Direction{left, right};
 
 template<typename T>
 struct point{
@@ -20,11 +25,19 @@ struct point{
 
 template<typename T>
 int crossW(point<T> o, point<T> a, point<T> b){
-  int w = (a.x - o.x)*(b.y-o.y) - (a.y-o.y)*(b.x-o.x);
+  T w = (a.x - o.x)*(b.y-o.y) - (a.y-o.y)*(b.x-o.x);
   if (w<0) return -1;
   if (w>0) return 1;
   return 0;
 }
+
+template <typename T>
+Direction direction(point<T> o, point<T> a, point<T> b){
+  int w = crossW( o, a,  b);
+  if (w <= 0) return Direction::right;
+  else return Direction::left;
+}
+
 
 template<typename T>
 T abs(point<T> p){
@@ -39,7 +52,6 @@ int compare(point<T> u, point<T> v){
   } else {
     return -w;
   }
-  
 }
 
 template<typename T, typename C>
@@ -50,6 +62,16 @@ point<T> next_point(std::vector< point<T> > & heap, C comp ){
   return ret;  
 }
 
+
+bool isFloat(double d){
+   double intpart;
+   return std::modf(d, &intpart) != 0.0;
+}
+
+template <typename T>
+bool hasAtLeastOneFloatOp(bool res, point<T> p ){
+  return res || isFloat(p.x) || isFloat(p.y);
+}
 
 int main(){
   string line;
@@ -73,14 +95,14 @@ int main(){
 
     sscanf(line.c_str(), "%la %la", &x, &y);  
 
-    if (y <= least_y.y){
+    if (y < least_y.y || (y==least_y.y && x<least_y.x)){
       least_y = {x,y};
       least_idx = i;
     }
     
     points.push_back( {x,y} );
      
-    cout<<"point: "<<x<<", "<<y<<endl;
+    //cout<<"point: "<<x<<", "<<y<<endl;
   }
 
   
@@ -94,18 +116,80 @@ int main(){
 
   
   for (auto p: points){
-    cout<<"newpoint: "<<p.x<<", "<<p.y<<endl;
+    //cout<<"newpoint: "<<p.x<<", "<<p.y<<endl;
   }
 
-  std::stack<point<double>> H;
+  std::vector<point<double>> H;
 
-  H.push(next_point<>(points, comp));
-  H.push(next_point<>(points, comp));
-  H.push(next_point<>(points, comp));
-
-
+  H.push_back(next_point<>(points, comp));
+  H.push_back(next_point<>(points, comp));
 
   
-  cout<<"Alama "<<npoints<<endl;
+  while (! points.empty() ){
+
+    //points::value_type p;
+    auto p = next_point(points, comp);
+    Direction d;
+    do{
+      size_t last = H.size() - 1;
+      auto ps = H[last];
+      auto pr = H[last - 1];
+      d = direction(pr, ps, p);
+      if (d == Direction::right) {
+        H.pop_back();
+      }
+    } while ( d == Direction::right && H.size() > 2) ;
+
+    H.push_back(p);    
+  }
+
+
+
+  //now check if the last two are in line with the first one
+  size_t last = H.size() - 1;
+  auto ps = H[last];
+  auto pr = H[last-1];
+  auto p = H[0];
+  Direction d = direction(pr, ps, p);
+  if (d == Direction::right) {
+    H.pop_back();
+  }
+
+ 
+  
+
+  
+  for (auto &p: H){
+    p.y += least_y.y; p.x += least_y.x; 
+  }
+
+  
+  
+  cout<<H.size()<<endl;
+  
+  //find rightmost element:
+  size_t idx = 0;
+  for (;idx<H.size()-1; idx++){
+    if (H[idx+1].x < H[idx].x){
+      break;
+    }
+  }
+
+  cout<<std::fixed;
+  bool hasAtLeastOneFloat = std::accumulate(H.begin(), H.end(), false, hasAtLeastOneFloatOp<double>);
+  if (hasAtLeastOneFloat){
+    cout<<std::setprecision(3);
+  } else{
+    cout<<std::setprecision(0);
+  }
+
+  //iterate backwards from the rightmost element
+  int i = idx;
+  do{
+    cout<<H[i].x<<" "<<H[i].y<<endl;
+    i--;
+    if(i<0) i=H.size()-1;
+  } while (i != idx);
+  
   return 0;
 }
