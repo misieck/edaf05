@@ -51,17 +51,6 @@ template <typename T> int compare(point<T> u, point<T> v) {
     }
 }
 
-template <typename T, typename C>
-typename T::value_type next_point(T begin, T &end, C comp) {
-    auto ret = *begin;
-    std::pop_heap(begin, end, comp);
-    //after pop_heap, the heap is shrunk by 1 from the end, but only "virtually"
-    //- the last element is now not part of the heap structure
-    // we shall modify the end iterator to reflect this, instead of removing the last element
-    end--;
-    return ret;
-}
-
 bool isFloat(double d) {
     double intpart;
     return std::modf(d, &intpart) != 0.0;
@@ -71,7 +60,10 @@ template <typename T> bool hasAtLeastOneFloatOp(bool res, point<T> p) {
     return res || isFloat(p.x) || isFloat(p.y);
 }
 
-int main() {
+
+template <typename T>
+void read(std::vector<T>& points, T& least_y){
+
     string line;
     //turn off sync with c stdio (printf, scanf) - it doubles the time to read in a file
     std::ios::sync_with_stdio(false); 
@@ -80,10 +72,7 @@ int main() {
     int dims, npoints;
     ss >> dims >> npoints;
     
-    std::vector<point<double>> points;
-    
-    size_t least_idx;
-    point<double> least_y = {0.0, std::numeric_limits<double>::max()};
+    least_y = {std::numeric_limits<double>::max(), std::numeric_limits<double>::max()};
     points.reserve(npoints);
 
     //read in the points and find the point with lowest y-coordinate
@@ -93,10 +82,18 @@ int main() {
         sscanf(line.c_str(), "%la %la", &x, &y);    
         if (y < least_y.y || (y == least_y.y && x < least_y.x)) {
             least_y = {x, y};
-            least_idx = i;
         }
         points.push_back({x, y});
     }
+        
+}
+    
+int main() {
+
+    std::vector<point<double>> points;
+    point<double> least_y;
+    
+    read(points, least_y);
 
     //move origo to the point with lowest y-coordinate
     for (auto &p : points) {
@@ -104,20 +101,17 @@ int main() {
         p.x -= least_y.x;
     }
     
-    auto comp = [](auto &a, auto &b) { return compare(a, b) > 0 ? true : false; };
-    std::make_heap(points.begin(), points.end(), comp);
-    
-    std::vector<point<double>> H;
-
-
-    //the main part of the graham scanner
-    auto end = points.end();
-    H.push_back(next_point<>(points.begin(), end, comp));
-    H.push_back(next_point<>(points.begin(), end, comp));
-    
-    while (points.begin() != end) {
+    auto comp = [](auto &a, auto &b) { return compare(a, b) > 0 ? !true : !false; };
         
-        auto p = next_point(points.begin(), end, comp);
+    std::vector<point<double>> H;
+    std::sort(points.begin(), points.end(), comp);
+    H.push_back(points[0]);
+    H.push_back(points[1]);
+    int i = 2;
+
+    // also check if the last two points are in line with the first one
+    while (i < points.size() + 1 )  {  
+        auto p = points[i++ % points.size()];
         Direction d;
         do {
             size_t last = H.size() - 1;
@@ -128,20 +122,8 @@ int main() {
                 H.pop_back();
             }
         } while (d == Direction::right && H.size() > 2);
-        
-        H.push_back(p);
+        if (i<=points.size()) H.push_back(p);
     }
-    
-    // now check if the last two points are in line with the first one
-    size_t last = H.size() - 1;
-    auto ps = H[last];
-    auto pr = H[last - 1];
-    auto p = H[0];
-    Direction d = direction(pr, ps, p);
-    if (d == Direction::right) {
-        H.pop_back();
-    }
-
 
     //restore the coordinates
     for (auto &p : H) {
@@ -170,7 +152,7 @@ int main() {
     }
     
     // iterate backwards from the rightmost element
-    int i = idx;
+    i = idx;
     do {
         cout << H[i].x << " " << H[i].y << endl;
         i--;
