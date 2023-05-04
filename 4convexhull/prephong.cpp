@@ -77,6 +77,33 @@ int include_points( vector<point>& to_array, vector<point> from_array, size_t fr
     return i;
 }
 
+template<typename T>
+size_t add(size_t dst_idx, size_t from_idx, size_t to_idx, T& to_array, const T& from_array, size_t size){
+    size_t j = from_idx;
+    size_t i;
+    size_t k = dst_idx;
+    do{
+        to_array[k++] = from_array[j];
+        i = j;
+        j = (j + 1) % size;
+        
+    } while(i != to_idx);
+    return k;
+}
+
+template<typename T>
+size_t leftmost(const T& p){
+    auto n = p.size();
+    size_t i = 0;
+    for(size_t k = 0;k < n; k++){
+        if(p[k].x < p[i].x){
+            i = k;
+        }
+    }
+    if(i == 0) i = 1;
+    return i;
+}
+
 std::tuple<size_t, size_t> base_case(vector<point> & points){
     std::ranges::sort (points, [](auto p1, auto p2){ return p1.x>p2.x || p1.x == p2.x && p1.y>p2.y; } );
     size_t n = points.size();
@@ -323,8 +350,18 @@ dc(vector<point> &points) {
         }
     }
 
-    
-    return{0,0};
+    vector<point> q;
+    size_t n = add(0,j_i_stars[0],j_i_stars[2],q,a,na);
+           n = add(n,j_i_stars[1],j_i_stars[2],q,b,nb);
+    size_t j = 0;
+    for(int k = 0; k < n; k++){
+            if(q[k].x > q[j].x || q[k].x == q[j].x && q[k].y > q[j].y){
+                j = k;
+            }
+    }
+    n = include_points(points,q,j,n);
+    size_t i = leftmost(points);
+    return{n,i};
 }
 
 
