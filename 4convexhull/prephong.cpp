@@ -1,15 +1,12 @@
 #include <algorithm>
 #include <cmath>
+#include <cstddef>
 #include <cstdio>
-#include <cstring>
 #include <iomanip>
 #include <iostream>
-#include <limits>
 #include <numeric>
 #include <sstream>
 #include <string>
-#include <sys/types.h>
-#include <utility>
 #include <vector>
 #include <tuple>
 #include <cassert>
@@ -20,7 +17,7 @@ using std::double_t;
 using std::endl;
 using std::string;
 using std::vector;
-
+using std::ranges::sort;
 
 struct point {
     double_t x;
@@ -81,41 +78,259 @@ int include_points( vector<point>& to_array, vector<point> from_array, size_t fr
 }
 
 std::tuple<size_t, size_t> base_case(vector<point> & points){
-    sort (points.begin(), points.end(), [](auto p1, auto p2){return p1.x>p2.x || (p1.x == p2.x && p1.y>p2.y); } );
-    size_t s = points.size();
-    assert( points.size() >= 2);
-    if (points.size() == 2) return {2,1};
+    std::ranges::sort (points, [](auto p1, auto p2){ return p1.x>p2.x || p1.x == p2.x && p1.y>p2.y; } );
+    size_t n = points.size();
+    assert( n > 0 );
+    if (n < 3) {
+        return {n, n-1};
+    }
 
     double_t k1 = k(points[0], points[1]);
     double_t k2 = k(points[0], points[2]);
 
-    //double intersect_y = points[0].y + k1*points[1].x; // if (points[1].y > intersect_y)
-     
-    assert( points.size() == 3 );
+    assert( n == 3 );
     if ( k1<k2 ){ 
         std::swap(points[1], points[2]);
-        return  { 3, 1 } ;
+        return  { n, n-2 } ;
     } else {
-        return  { 3, 2 };
+        return  { n, n-1 };
+    }
+}
+
+
+// [ iR*, iL*, jL*, jR* ]
+template <typename VP, typename VD>
+void case1(VP a, size_t na, VP b, size_t nb, VD alfas, VD betas, size_t iL, size_t jL, size_t j_i_stars[4]) {
+    size_t i = 0;
+    size_t j = 0;
+    while (true){
+        double_t gamma = k(a[i], b[j]);
+        if ( ( alfas[i] > gamma || std::isinf(alfas[i]) ) && i<iL  ){
+            i++;
+        } else if ( ( betas[j] > gamma || std::isinf(betas[j]) ) && j<jL  ){
+            j++;
+        } else {
+            break;
+        }
     }
 
-    
+    //iR*
+    j_i_stars[0] = i;
+    //jR*
+    j_i_stars[3] = j;
+    i=iL;
+    j=jL;
+
+    while (true){
+        double_t gamma = k(a[i], b[j]);
+        if (  betas[j] > gamma  && j!=0  ){
+            j = (j+1) % nb;
+        } else if ( alfas[i] > gamma  && i != 0  ){
+            i = (i+1) % na;
+        } else {
+            break;
+        }
+    }
+
+    //iL*
+    j_i_stars[1] = i;
+    //jL*
+    j_i_stars[2] = j;
 }
+
+
+// [ iR*, iL*, jL*, jR* ]
+template <typename VP, typename VD>
+void case2(VP a, size_t na, VP b, size_t nb, VD alfas, VD betas, size_t iL, size_t jL, size_t j_i_stars[4]) {
+    size_t i = 0;
+    size_t j = 0;
+    while (true){
+        double_t gamma = k(a[i], b[j]);
+        if ( ( alfas[i] > gamma || std::isinf(alfas[i]) ) && i<iL  ){
+            i++;
+        } else if ( ( betas[j] > gamma || std::isinf(betas[j]) ) && j<jL  ){
+            j++;
+        } else {
+            break;
+        }
+    }
+
+    //iR*
+    j_i_stars[0] = i;
+    //jR*
+    j_i_stars[3] = j;
+    i=iL;
+    j=jL;
+
+    while (true){
+        double_t gamma = k(a[i], b[j]);
+        size_t ak = (na+i-1) % na;
+        size_t bk = (nb+i-1) % nb;
+        
+        if (  std::isfinite(alfas[ak]) && alfas[ak] < gamma && i != 0  ){
+            i = ak;
+        } else if ( betas[bk] < gamma  && j != 0  ){
+            j = bk;
+        } else {
+            break;
+        }
+    }
+
+    //iL*
+    j_i_stars[1] = i;
+    //jL*
+    j_i_stars[2] = j;
+}
+
+// [ iR*, iL*, jL*, jR* ]
+template <typename VP, typename VD>
+void case3(VP a, size_t na, VP b, size_t nb, VD alfas, VD betas, size_t iL, size_t jL, size_t j_i_stars[4]) {
+    size_t i = 0;
+    size_t j = 0;
+
+    while (true){
+        double_t gamma = k(a[i], b[j]);
+        size_t ak = (na+i-1) % na;
+        size_t bk = (nb+i-1) % nb;
+        
+        if ( betas[bk] < gamma  && j != jL  ) {
+            j = bk;
+        } else if (alfas[ak] < gamma  && i != iL  ){
+            i = ak;
+        } else {
+            break;
+        }
+    }
+
+    //iR*
+    j_i_stars[0] = i;
+    //jR*
+    j_i_stars[3] = j;
+    i=iL;
+    j=jL;
+    
+    
+    while (true){
+        double_t gamma = k(a[i], b[j]);
+        if ( betas[j] > gamma && j!=0  ){
+            j = (j+1) % nb;
+        } else if ( alfas[i] > gamma && i!=0  ){
+            i = (i+1) % na;
+        } else {
+            break;
+        }
+    }
+
+    //iL*
+    j_i_stars[1] = i;
+    //jL*
+    j_i_stars[2] = j;
+}
+
+
+// [ iR*, iL*, jL*, jR* ]
+template <typename VP, typename VD>
+void case4(VP a, size_t na, VP b, size_t nb, VD alfas, VD betas, size_t iL, size_t jL, size_t j_i_stars[4]) {
+    size_t i = 0;
+    size_t j = 0;
+    while (true){
+        double_t gamma = k(a[i], b[j]);
+        size_t ak = (na+i-1) % na;
+        size_t bk = (nb+i-1) % nb;
+
+        if ( betas[bk] < gamma && j!=jL   ){
+            j = bk;
+        } else if ( alfas[ak] < gamma && i!=iL  ){
+            i = ak;
+        } else {
+            break;
+        }
+    }
+
+    //iR*
+    j_i_stars[0] = i;
+    //jR*
+    j_i_stars[3] = j;
+    i=iL;
+    j=jL;
+
+    while (true){
+        double_t gamma = k(a[i], b[j]);
+        size_t ak = (na+i-1) % na;
+        size_t bk = (nb+i-1) % nb;
+        
+        if (  std::isfinite(alfas[ak]) && alfas[ak] < gamma && i != 0  ){
+            i = ak;
+        } else if ( std::isfinite(betas[bk]) && betas[bk] < gamma && j != 0  ){
+            j = bk;
+        } else {
+            break;
+        }
+    }
+
+    //iL*
+    j_i_stars[1] = i;
+    //jL*
+    j_i_stars[2] = j;
+}
+
+
 
 std::tuple<size_t, size_t>
 dc(vector<point> &points) {
 
     if (points.size()<=3) return base_case(points);
 
+    size_t na = points.size() / 2;
+    /*
+    if (points[na].y == points[na-1].y)
+    {
+        while (points[na+1].y == points[na].y){
+            na++;
+        }
+    }
+    */
+    size_t nb = points.size() - na;
+
+    vector<point> a = vector<point>(points.begin(), points.begin()+na);
+    vector<point> b = vector<point>(points.begin()+na, points.end() );
+    auto ra = dc(a);
+    auto rb = dc(b);
+    na = std::get<0>(ra);
+    nb = std::get<0>(rb);
+    size_t iL = std::get<1>(ra);
+    size_t jL = std::get<1>(rb);
+
+    auto alfas = create_ks(a);
+    auto betas = create_ks(b);
+    double_t La = a[iL].x;
+    double_t Ra = a[0].x;
+    double_t Lb = b[jL].x;
+    double_t Rb = b[0].x;
+
+    size_t j_i_stars[4];
+    if (Ra < Rb){
+        if (La < Lb){
+            case1(a, na, b, nb, alfas, betas, iL, jL, j_i_stars);
+        } else {
+            case2(a, na, b, nb, alfas, betas, iL, jL, j_i_stars);
+        }
+    } else{
+        if (La < Lb){
+            case3(a, na, b, nb, alfas, betas, iL, jL, j_i_stars);
+        } else {
+            case4(a, na, b, nb, alfas, betas, iL, jL, j_i_stars);
+        }
+    }
+
     
-    return {0,0};
+    return{0,0};
 }
 
 
 const int NTESTS = 7;
 
 point data[NTESTS][3] = {
-
     { {2, 1}, {1, 3}, {4, 2},},   
     { {4, 2}, {1, 3}, {2, 1} },
 
@@ -127,14 +342,11 @@ point data[NTESTS][3] = {
     { {0,1}, {1,1}, {4,0} },
     
     { {2, -2}, {1, -1}, {-1,0} }, // data/3/3.0.in
-    
-    
 };
 
 point results[][3] = {
     { {4, 2}, {2, 1}, {1, 3} },
     { {4, 2}, {2, 1}, {1, 3} },
-
 
     { {4,1}, {1,2}, {2,3} },
     { {4,1}, {1,2}, {2,3} },
