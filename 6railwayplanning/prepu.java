@@ -107,6 +107,20 @@ class Graph {
 
 	}
 
+
+
+	void removeEdges(int from, int to, ArrayList<Integer> array) {
+		for (int i = from; i<=to; i++) {
+			removeEdge( array.get(i) );
+		}
+	}
+
+	void addEdges(int from, int to, ArrayList<Integer> array) {
+		for (int i = from; i<=to; i++) {
+			addEdge( array.get(i) );
+		}
+	}
+
 	void removeEdge(int idx) {
 		Edge e = edges.get(idx);
 		e.u.edges.remove(e);
@@ -139,15 +153,18 @@ class prepu {
 		assert G.edges.size() == M; // Verify number of edges
 		assert G.nodes.size() == N; // Verify number of nodes
 
-		List<Integer> removeOrderList = new ArrayList<>(P);
+		ArrayList<Integer> removeOrderList = new ArrayList<>(P);
 		for (int i = 0; i < P; ++i) {
 			removeOrderList.add(scan.nextInt());
 		}
-		int removedCount = 0;
-		int flow = preflow(G);
-		if (flow < C) {
-			System.out.println("0 " + flow);
-		}
+		int flow;
+
+		int res = binarySearch(G, C, removeOrderList);
+		G.reset();
+		flow = preflow(G);
+		System.out.println(res + " " + flow);
+		/*
+
 
 		for (Integer toRemove: removeOrderList){
 			G.removeEdge(toRemove);
@@ -162,12 +179,35 @@ class prepu {
 			}
 
 		}
-		G.reset();
-		flow = preflow(G);
-		System.out.println(removedCount + " " + flow);
+*/
+	}
 
+	static int binarySearch(Graph g, int C, ArrayList<Integer> toRemove) {
+		int flow = 0;
+		int from = 0;
+		int size = toRemove.size();
+		int to = size -1;
+		int mid = size/2;
+		int oldmid = mid;
 
-		//System.out.println(flow);
+		g.removeEdges(from, mid, toRemove);
+		while (from <= to) {
+			flow = preflow(g);
+			if (flow >= C) {
+				from = mid + 1;
+				oldmid = mid;
+				mid = (from + to) / 2;
+				g.removeEdges(from, mid, toRemove);
+			} else {
+				to = mid - 1;
+				//g.addEdges(from, mid);
+				mid = (from + to) / 2;
+				g.addEdges(mid+1, to+1, toRemove);
+			}
+
+		}
+
+		return oldmid +1;
 	}
 
 	private static int preflow(Graph G) {
