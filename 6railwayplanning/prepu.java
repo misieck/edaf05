@@ -136,7 +136,14 @@ class prepu {
 			Node u = pop(list);
 			for (Edge e : u.edges) {
 				Node v = u.other(e);
-				if (u.height > v.height && Math.abs(e.flow) < e.capacity) {
+				int cmp = 0;
+				if (u == e.u) {//positive directions
+					cmp = e.flow;
+				} else {
+					cmp = -e.flow;
+				}
+
+				if (u.height > v.height && cmp < e.capacity) {
 					push(G,u,v,e);
 					if(G.isFinished()) return -G.nodes.get(0).excess;
 				}
@@ -171,10 +178,10 @@ class prepu {
 			e.flow -= delta;
 		}
 		if(G.isStartNode(u)) {
-			System.out.println("Decreasing start " + delta);
+			//System.out.println("Decreasing start " + delta);
 		}
 		if(G.isStartNode(v)) {
-			System.out.println("Increasing start " + delta);
+			//System.out.println("Increasing start " + delta);
 		}
 
 		u.excess -= delta;
