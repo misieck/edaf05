@@ -92,6 +92,35 @@ class Graph {
 		return u == nodes.get(0);
 	}
 
+	void reset(){
+		for (Node n : nodes) {
+			n.height = 0;
+			n.excess = 0;
+
+		}
+
+		for (Edge e : edges) {
+			e.flow = 0;
+		}
+
+
+
+	}
+
+	void removeEdge(int idx) {
+		Edge e = edges.get(idx);
+		e.u.edges.remove(e);
+		e.v.edges.remove(e);
+		reset();
+	}
+
+	void addEdge(int idx) {
+		Edge e = edges.get(idx);
+		e.u.edges.add(e);
+		e.v.edges.add(e);
+		reset();
+	}
+
 }
 
 class prepu {
@@ -114,9 +143,31 @@ class prepu {
 		for (int i = 0; i < P; ++i) {
 			removeOrderList.add(scan.nextInt());
 		}
-
+		int removedCount = 0;
 		int flow = preflow(G);
-		System.out.println(flow);
+		if (flow < C) {
+			System.out.println("0 " + flow);
+		}
+
+		for (Integer toRemove: removeOrderList){
+			G.removeEdge(toRemove);
+			flow = preflow(G);
+			if (flow >= C) {
+				removedCount ++;
+				//System.out.println(removedCount + " " + flow);
+			} else {
+				//System.out.println( "ADDING BACK " + toRemove);
+				G.addEdge(toRemove);
+				break;
+			}
+
+		}
+		G.reset();
+		flow = preflow(G);
+		System.out.println(removedCount + " " + flow);
+
+
+		//System.out.println(flow);
 	}
 
 	private static int preflow(Graph G) {
@@ -176,12 +227,6 @@ class prepu {
 		} else {
 			delta = Math.min(u.excess, e.capacity + e.flow);
 			e.flow -= delta;
-		}
-		if(G.isStartNode(u)) {
-			//System.out.println("Decreasing start " + delta);
-		}
-		if(G.isStartNode(v)) {
-			//System.out.println("Increasing start " + delta);
 		}
 
 		u.excess -= delta;
