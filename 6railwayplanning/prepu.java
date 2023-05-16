@@ -13,6 +13,9 @@ class Edge {
 		this.v = v;
 		this.capacity = c;
 	}
+	public String toString () {
+		return u.id + " -> " + v.id;
+	}
 }
 
 class Node {
@@ -46,6 +49,7 @@ class Graph {
 	ArrayList<Edge> edges;
 	ArrayList<Node> candidateSet;// candidates for push i.e. nodes with excess
 
+
 	public Graph(int n, int m) {
 		nodes = new ArrayList<>(n);
 		edges = new ArrayList<>(m);
@@ -78,20 +82,20 @@ class Graph {
 		U.edges.add(newEdge);
 		V.edges.add(newEdge);
 	}
-
+	
 	boolean isFinished() {
 		return nodes.get(0).excess == -nodes.get(nodes.size() - 1).excess;
 	}
-
+	
 	boolean isLastNode(Node u) {
 		return u == nodes.get(nodes.size() - 1);
 	}
-
+	
 	boolean isStartNode(Node u) {
 		return u == nodes.get(0);
 	}
 
-	void reset() {
+	void reset(){
 		for (Node n : nodes) {
 			n.height = 0;
 			n.excess = 0;
@@ -101,33 +105,39 @@ class Graph {
 		for (Edge e : edges) {
 			e.flow = 0;
 		}
-
+		assert (candidateSet.isEmpty());
 	}
 
+
+
 	void removeEdges(int from, int to, ArrayList<Integer> array) {
-		for (int i = from; i <= to; i++) {
-			removeEdge(array.get(i));
+		for (int i = from; i<=to; i++) {
+			Edge e = edges.get( array.get(i) );
+			e.u.edges.remove(e);
+			e.v.edges.remove(e);
 		}
+		reset();
 	}
 
 	void addEdges(int from, int to, ArrayList<Integer> array) {
-		for (int i = from; i <= to; i++) {
-			addEdge(array.get(i));
+		for (int i = from; i<=to; i++) {
+			Edge e = edges.get(array.get(i));
+			e.u.edges.add(e);
+			e.v.edges.add(e);
 		}
-	}
-
-	void removeEdge(int idx) {
-		Edge e = edges.get(idx);
-		e.u.edges.remove(e);
-		e.v.edges.remove(e);
 		reset();
 	}
 
-	void addEdge(int idx) {
-		Edge e = edges.get(idx);
-		e.u.edges.add(e);
-		e.v.edges.add(e);
-		reset();
+	Node listPop() {
+		var list = this.candidateSet;
+		Node u = list.get(list.size() - 1);
+		list.remove(list.size() - 1);
+		assert ( !list.contains(u) );
+		return u;
+	}
+
+	void listPush(Node u) {
+		this.candidateSet.add(u);
 	}
 
 }
@@ -138,7 +148,6 @@ class prepu {
 		Scanner scan = new Scanner(System.in);
 		int N = scan.nextInt(); // number of nodes
 		int M = scan.nextInt(); // number of edges
-		// System.out.println("Graph of " + N + " nodes and " + M + " edges!");
 		int C = scan.nextInt(); // minimal capacity requirement
 		int P = scan.nextInt(); // number of edge candidates to remove
 		Graph G = new Graph(N, M);
@@ -152,23 +161,14 @@ class prepu {
 		for (int i = 0; i < P; ++i) {
 			removeOrderList.add(scan.nextInt());
 		}
-		int flow;
-
-		int res = binarySearch(G, C, removeOrderList);
+		int res = 0;
+		if (removeOrderList.size() > 0) {
+			res = binarySearch(G, C, removeOrderList);
+		}
 		G.reset();
-		flow = preflow(G);
+		int flow = preflow(G);
 		System.out.println(res + " " + flow);
-		/*
-		 * 
-		 * 
-		 * for (Integer toRemove: removeOrderList){ G.removeEdge(toRemove); flow =
-		 * preflow(G); if (flow >= C) { removedCount ++;
-		 * //System.out.println(removedCount + " " + flow); } else {
-		 * //System.out.println( "ADDING BACK " + toRemove); G.addEdge(toRemove); break;
-		 * }
-		 * 
-		 * }
-		 */
+		
 	}
 
 	static int binarySearch(Graph g, int C, ArrayList<Integer> toRemove) {
@@ -212,20 +212,25 @@ class prepu {
 
 		var list = G.candidateSet;
 		while (!list.isEmpty()) {
-			Node u = pop(list);
+			Node u = G.listPop();
+			assert ( !G.candidateSet.contains(u) );
+			assert ( u.excess>0 );
 			for (Edge e : u.edges) {
 				Node v = u.other(e);
 				int cmp = 0;
-				if (u == e.u) {// positive directions
+				if (u == e.u) { //positive direction
 					cmp = e.flow;
 				} else {
 					cmp = -e.flow;
 				}
 
 				if (u.height > v.height && cmp < e.capacity) {
-					push(G, u, v, e);
-					if (G.isFinished())
-						return -G.nodes.get(0).excess;
+					assert (!G.candidateSet.contains(u));
+					push(G,u,v,e);
+					if(G.isFinished()) return -G.nodes.get(0).excess;
+					if (u.excess == 0) {
+						break;
+					}
 				}
 			}
 			if (u.excess > 0) {
@@ -235,15 +240,11 @@ class prepu {
 		return -G.nodes.get(0).excess;
 	}
 
-	private static Node pop(ArrayList<Node> list) {
-		Node u = list.get(list.size() - 1);
-		list.remove(list.size() - 1);
-		return u;
-	}
-
 	private static void relabel(Graph G, Node u) {
 		u.height++;
-		G.candidateSet.add(u);
+		assert (u.excess > 0);
+		assert (!G.candidateSet.contains(u));
+		G.listPush(u);
 	}
 
 	private static void push(Graph G, Node u, Node v, Edge e) {
@@ -265,10 +266,13 @@ class prepu {
 		assert u.excess >= 0;
 		assert Math.abs(e.flow) <= e.capacity;
 		if (u.excess > 0 && !G.isLastNode(u)) {
-			G.candidateSet.add(u); // If u is in set it is not added
+			assert (!G.candidateSet.contains(u));
+			//dont need the put u back in worklist because the main loop tries all edges until excess preflow is depleted
+			//G.listPush(u); // If u is in set it is not added
 		}
 		if (v.excess > 0 && v.excess == delta && !G.isLastNode(v)) {
-			G.candidateSet.add(v); // If v is in set it is not added
+			assert (!G.candidateSet.contains(v));
+			G.listPush(v); // If v is in set it is not added
 		}
 
 	}
